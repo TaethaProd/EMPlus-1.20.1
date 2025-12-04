@@ -1,0 +1,15 @@
+{
+  "itemGroup.emplus.mythical_keys": "Mythical Keys",
+  "item.emplus.mythical_key_1": "Mythical Key I",
+  "item.emplus.mythical_key_2": "Mythical Key II",
+  "item.emplus.mythical_key_3": "Mythical Key III",
+  "item.emplus.mythical_key_4": "Mythical Key IV",
+  "item.emplus.mythical_key_5": "Mythical Key V",
+  "item.emplus.mythical_key_6": "Mythical Key VI",
+  "item.emplus.mythical_key_7": "Mythical Key VII",
+  "item.emplus.mythical_key_8": "Mythical Key VIII",
+  "item.emplus.mythical_key_9": "Mythical Key IX",
+  "item.emplus.mythical_key_10": "Mythical Key X",
+  "item.emplus.mythical_key.with_mob": "%s (%s)",
+  "bossbar.emplus.mythical_mob": "Mythical Invader — Level %s"
+}

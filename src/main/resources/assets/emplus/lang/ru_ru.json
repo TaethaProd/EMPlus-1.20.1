@@ -1,0 +1,15 @@
+{
+  "itemGroup.emplus.mythical_keys": "Мифические ключи",
+  "item.emplus.mythical_key_1": "Мифический ключ I",
+  "item.emplus.mythical_key_2": "Мифический ключ II",
+  "item.emplus.mythical_key_3": "Мифический ключ III",
+  "item.emplus.mythical_key_4": "Мифический ключ IV",
+  "item.emplus.mythical_key_5": "Мифический ключ V",
+  "item.emplus.mythical_key_6": "Мифический ключ VI",
+  "item.emplus.mythical_key_7": "Мифический ключ VII",
+  "item.emplus.mythical_key_8": "Мифический ключ VIII",
+  "item.emplus.mythical_key_9": "Мифический ключ IX",
+  "item.emplus.mythical_key_10": "Мифический ключ X",
+  "item.emplus.mythical_key.with_mob": "%s (%s)",
+  "bossbar.emplus.mythical_mob": "Мифический противник — уровень %s"
+}
