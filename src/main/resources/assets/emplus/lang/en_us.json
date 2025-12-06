@@ -1,5 +1,6 @@
 {
   "itemGroup.emplus.mythical_keys": "Mythical Keys",
+  "item.emplus.mythical_key": "Mythical Key %s",
   "item.emplus.mythical_key_1": "Mythical Key I",
   "item.emplus.mythical_key_2": "Mythical Key II",
   "item.emplus.mythical_key_3": "Mythical Key III",
@@ -10,6 +11,6 @@
   "item.emplus.mythical_key_8": "Mythical Key VIII",
   "item.emplus.mythical_key_9": "Mythical Key IX",
   "item.emplus.mythical_key_10": "Mythical Key X",
-  "bossbar.emplus.mythical_mob": "Mythical Invader — Level %s",
+  "bossbar.emplus.mythical_mob": "Mythical Invader - Level %s",
   "tooltip.emplus.summons": "Summons: %s"
 }

@@ -19,6 +19,8 @@ import net.minecraft.text.Text;
 import taethaprod.emplus.ModItems;
 import taethaprod.emplus.ServerTaskScheduler;
 import taethaprod.emplus.SummonedBossBarManager;
+import taethaprod.emplus.config.BossScalingConfig;
+import taethaprod.emplus.config.BossScalingConfigManager;
 import taethaprod.emplus.config.ConfigManager;
 import taethaprod.emplus.config.ModConfig;
 import taethaprod.emplus.origin.OriginLookup;
@@ -27,15 +29,10 @@ import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class MythicalKeyItem extends Item {
-	private final int level;
+	private static final String LEVEL_KEY = "Level";
 
-	public MythicalKeyItem(int level, Settings settings) {
+	public MythicalKeyItem(Settings settings) {
 		super(settings);
-		this.level = level;
-	}
-
-	public int getLevel() {
-		return level;
 	}
 
 	@Override
@@ -46,7 +43,14 @@ public class MythicalKeyItem extends Item {
 		}
 
 		ServerWorld serverWorld = (ServerWorld) world;
-		EntityType<? extends MobEntity> type = getMobType(stack).orElseGet(() -> ModItems.getRandomMobType(world.getRandom()));
+		int level = getLevel(stack);
+		Optional<Identifier> mobId = getMobId(stack);
+		Optional<EntityType<? extends MobEntity>> explicitType = mobId.flatMap(id -> resolveMobType(serverWorld, id));
+		if (mobId.isPresent() && explicitType.isEmpty()) {
+			user.sendMessage(Text.literal("Invalid mob on key: " + mobId.get()), true);
+			return TypedActionResult.fail(stack);
+		}
+		EntityType<? extends MobEntity> type = explicitType.orElseGet(() -> ModItems.getRandomMobType(world.getRandom()));
 		String originId = getPlayerOriginIfEnabled(user);
 		Vec3d spawnPos = chooseSpawnPos(serverWorld, user);
 		if (spawnPos == null) {
@@ -54,7 +58,7 @@ public class MythicalKeyItem extends Item {
 		}
 
 		// Delay lightning + mob by 2 seconds (40 ticks) for effect.
-		ServerTaskScheduler.schedule(serverWorld, 40, w -> spawnLightningAndMob(w, spawnPos, type, originId));
+		ServerTaskScheduler.schedule(serverWorld, 40, w -> spawnLightningAndMob(w, spawnPos, type, originId, level));
 
 		if (!user.getAbilities().creativeMode) {
 			stack.decrement(1);
@@ -64,7 +68,7 @@ public class MythicalKeyItem extends Item {
 		return TypedActionResult.success(stack, world.isClient);
 	}
 
-	private void spawnLightningAndMob(ServerWorld world, Vec3d spawnPos, EntityType<? extends MobEntity> type, String originId) {
+	private void spawnLightningAndMob(ServerWorld world, Vec3d spawnPos, EntityType<? extends MobEntity> type, String originId, int level) {
 		var lightning = net.minecraft.entity.EntityType.LIGHTNING_BOLT.create(world);
 		if (lightning != null) {
 			lightning.refreshPositionAfterTeleport(spawnPos.x, spawnPos.y, spawnPos.z);
@@ -72,7 +76,7 @@ public class MythicalKeyItem extends Item {
 			world.spawnEntity(lightning);
 		}
 
-		MobEntity mob = createBuffedMob(world, type);
+		MobEntity mob = createBuffedMob(world, type, level);
 		if (mob == null) {
 			return;
 		}
@@ -100,22 +104,27 @@ public class MythicalKeyItem extends Item {
 		return null;
 	}
 
-	private MobEntity createBuffedMob(ServerWorld world, EntityType<? extends MobEntity> type) {
+	private MobEntity createBuffedMob(ServerWorld world, EntityType<? extends MobEntity> type, int level) {
 		MobEntity mob = type.create(world);
 		if (mob == null) {
 			return null;
 		}
 
-		applyAttributeMultiplier(mob.getAttributeInstance(EntityAttributes.GENERIC_MAX_HEALTH), 1.0 + level * 0.4);
-		applyAttributeMultiplier(mob.getAttributeInstance(EntityAttributes.GENERIC_ARMOR), 1.0 + level * 0.25);
-		applyAttributeMultiplier(mob.getAttributeInstance(EntityAttributes.GENERIC_ATTACK_DAMAGE), 1.0 + level * 0.35);
-		applyAttributeMultiplier(mob.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED), movementSpeedMultiplier(level));
+		BossScalingConfig.TierScaling scale = BossScalingConfigManager.getTierScaling(level);
+		applyAttributeMultiplier(mob.getAttributeInstance(EntityAttributes.GENERIC_MAX_HEALTH), scale.maxHealth);
+		applyAttributeMultiplier(mob.getAttributeInstance(EntityAttributes.GENERIC_ARMOR), scale.armor);
+		applyAttributeMultiplier(mob.getAttributeInstance(EntityAttributes.GENERIC_ATTACK_DAMAGE), scale.attackDamage);
+		applyAttributeMultiplier(mob.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED), scale.movementSpeed);
+		applyAttributeMultiplier(mob.getAttributeInstance(EntityAttributes.GENERIC_KNOCKBACK_RESISTANCE), scale.knockbackResistance);
+		applyAttributeMultiplier(mob.getAttributeInstance(EntityAttributes.GENERIC_FOLLOW_RANGE), scale.followRange);
 
 		mob.setHealth(mob.getMaxHealth());
 		mob.setPersistent();
+		mob.addCommandTag(levelTag(level));
 
+		int maxTier = BossScalingConfigManager.getMaxTier();
 		int nextLevel = level + 1;
-		if (nextLevel <= 10) {
+		if (nextLevel <= maxTier) {
 			mob.addCommandTag(nextLevelTag(nextLevel));
 		}
 
@@ -126,24 +135,27 @@ public class MythicalKeyItem extends Item {
 		return "emplus:mythical_key_next_level=" + level;
 	}
 
+	public static String levelTag(int level) {
+		return "emplus:mythical_key_level=" + level;
+	}
+
 	private void applyAttributeMultiplier(EntityAttributeInstance instance, double multiplier) {
 		if (instance == null) {
 			return;
 		}
-		double newBase = Math.max(1.0D, instance.getBaseValue() * multiplier);
+		double newBase = Math.max(0.0D, instance.getBaseValue() * multiplier);
 		instance.setBaseValue(newBase);
-	}
-
-	private double movementSpeedMultiplier(int level) {
-		// Level 1 = 1x, Level 10 ~ 2x, linear scale.
-		int clampedLevel = Math.max(1, Math.min(10, level));
-		double step = 1.0 / 9.0;
-		return 1.0 + (clampedLevel - 1) * step;
 	}
 
 	@Override
 	public String getTranslationKey() {
-		return "item.emplus.mythical_key_" + level;
+		return "item.emplus.mythical_key";
+	}
+
+	@Override
+	public Text getName(ItemStack stack) {
+		int level = getLevel(stack);
+		return Text.translatable(getTranslationKey(), level);
 	}
 
 	@Override
@@ -162,20 +174,7 @@ public class MythicalKeyItem extends Item {
 	}
 
 	public Optional<EntityType<? extends MobEntity>> getMobType(ItemStack stack) {
-		if (!stack.hasNbt() || !stack.getNbt().contains("Mob")) {
-			return Optional.empty();
-		}
-		Identifier id = Identifier.tryParse(stack.getNbt().getString("Mob"));
-		if (id == null) {
-			return Optional.empty();
-		}
-		EntityType<?> type = net.minecraft.registry.Registries.ENTITY_TYPE.get(id);
-		if (type != null && net.minecraft.entity.mob.MobEntity.class.isAssignableFrom(type.getBaseClass())) {
-			@SuppressWarnings("unchecked")
-			EntityType<? extends MobEntity> mobType = (EntityType<? extends MobEntity>) type;
-			return Optional.of(mobType);
-		}
-		return Optional.empty();
+		return getMobId(stack).flatMap(this::resolveMobType);
 	}
 
 	public void setMob(ItemStack stack, EntityType<? extends MobEntity> type) {
@@ -183,6 +182,18 @@ public class MythicalKeyItem extends Item {
 		if (id != null) {
 			stack.getOrCreateNbt().putString("Mob", id.toString());
 		}
+	}
+
+	public int getLevel(ItemStack stack) {
+		if (!stack.hasNbt() || !stack.getNbt().contains(LEVEL_KEY)) {
+			return 1;
+		}
+		int level = stack.getNbt().getInt(LEVEL_KEY);
+		return Math.max(1, level);
+	}
+
+	public void setLevel(ItemStack stack, int level) {
+		stack.getOrCreateNbt().putInt(LEVEL_KEY, Math.max(1, level));
 	}
 
 	private String getPlayerOriginIfEnabled(PlayerEntity player) {
@@ -193,8 +204,42 @@ public class MythicalKeyItem extends Item {
 		return OriginLookup.getOriginId(player).orElse(null);
 	}
 
+	private Optional<Identifier> getMobId(ItemStack stack) {
+		if (!stack.hasNbt() || !stack.getNbt().contains("Mob")) {
+			return Optional.empty();
+		}
+		return Optional.ofNullable(Identifier.tryParse(stack.getNbt().getString("Mob")));
+	}
+
+	private Optional<EntityType<? extends MobEntity>> resolveMobType(Identifier id) {
+		EntityType<?> type = net.minecraft.registry.Registries.ENTITY_TYPE.get(id);
+		if (type != null && net.minecraft.entity.mob.MobEntity.class.isAssignableFrom(type.getBaseClass())) {
+			@SuppressWarnings("unchecked")
+			EntityType<? extends MobEntity> mobType = (EntityType<? extends MobEntity>) type;
+			return Optional.of(mobType);
+		}
+		return Optional.empty();
+	}
+
+	private Optional<EntityType<? extends MobEntity>> resolveMobType(ServerWorld world, Identifier id) {
+		Optional<EntityType<? extends MobEntity>> direct = resolveMobType(id);
+		if (direct.isPresent()) {
+			return direct;
+		}
+		EntityType<?> type = net.minecraft.registry.Registries.ENTITY_TYPE.get(id);
+		if (type != null) {
+			var created = type.create(world);
+			if (created instanceof MobEntity) {
+				@SuppressWarnings("unchecked")
+				EntityType<? extends MobEntity> mobType = (EntityType<? extends MobEntity>) type;
+				return Optional.of(mobType);
+			}
+		}
+		return Optional.empty();
+	}
+
 	@Override
 	public String toString() {
-		return ("MythicalKeyItem[level=%d]").formatted(level);
+		return "MythicalKeyItem";
 	}
 }
