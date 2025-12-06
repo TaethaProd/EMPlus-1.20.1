@@ -10,6 +10,6 @@
   "item.emplus.mythical_key_8": "Мифический ключ VIII",
   "item.emplus.mythical_key_9": "Мифический ключ IX",
   "item.emplus.mythical_key_10": "Мифический ключ X",
-  "item.emplus.mythical_key.with_mob": "%s (%s)",
-  "bossbar.emplus.mythical_mob": "Мифический противник — уровень %s"
+  "bossbar.emplus.mythical_mob": "Мифический противник — уровень %s",
+  "tooltip.emplus.summons": "Призывает: %s"
 }

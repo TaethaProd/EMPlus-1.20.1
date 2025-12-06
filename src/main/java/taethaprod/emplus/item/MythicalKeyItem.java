@@ -9,15 +9,19 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Hand;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.TypedActionResult;
+import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.Identifier;
 import net.minecraft.world.World;
-
+import net.minecraft.text.Text;
+import taethaprod.emplus.ModItems;
 import taethaprod.emplus.ServerTaskScheduler;
 import taethaprod.emplus.SummonedBossBarManager;
-import taethaprod.emplus.ModItems;
+import taethaprod.emplus.config.ConfigManager;
+import taethaprod.emplus.config.ModConfig;
+import taethaprod.emplus.origin.OriginLookup;
 
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
@@ -43,13 +47,14 @@ public class MythicalKeyItem extends Item {
 
 		ServerWorld serverWorld = (ServerWorld) world;
 		EntityType<? extends MobEntity> type = getMobType(stack).orElseGet(() -> ModItems.getRandomMobType(world.getRandom()));
+		String originId = getPlayerOriginIfEnabled(user);
 		Vec3d spawnPos = chooseSpawnPos(serverWorld, user);
 		if (spawnPos == null) {
 			return TypedActionResult.pass(stack);
 		}
 
 		// Delay lightning + mob by 2 seconds (40 ticks) for effect.
-		ServerTaskScheduler.schedule(serverWorld, 40, w -> spawnLightningAndMob(w, spawnPos, type));
+		ServerTaskScheduler.schedule(serverWorld, 40, w -> spawnLightningAndMob(w, spawnPos, type, originId));
 
 		if (!user.getAbilities().creativeMode) {
 			stack.decrement(1);
@@ -59,7 +64,7 @@ public class MythicalKeyItem extends Item {
 		return TypedActionResult.success(stack, world.isClient);
 	}
 
-	private void spawnLightningAndMob(ServerWorld world, Vec3d spawnPos, EntityType<? extends MobEntity> type) {
+	private void spawnLightningAndMob(ServerWorld world, Vec3d spawnPos, EntityType<? extends MobEntity> type, String originId) {
 		var lightning = net.minecraft.entity.EntityType.LIGHTNING_BOLT.create(world);
 		if (lightning != null) {
 			lightning.refreshPositionAfterTeleport(spawnPos.x, spawnPos.y, spawnPos.z);
@@ -72,6 +77,9 @@ public class MythicalKeyItem extends Item {
 			return;
 		}
 		mob.refreshPositionAndAngles(spawnPos.x, spawnPos.y, spawnPos.z, world.getRandom().nextFloat() * 360.0F, 0.0F);
+		if (originId != null && !originId.isEmpty()) {
+			mob.addCommandTag("emplus:origin=" + originId);
+		}
 		world.spawnEntity(mob);
 		SummonedBossBarManager.track(mob, level);
 	}
@@ -127,7 +135,7 @@ public class MythicalKeyItem extends Item {
 	}
 
 	private double movementSpeedMultiplier(int level) {
-		// Level 1 = 1x, Level 10 ≈ 2x, linear scale.
+		// Level 1 = 1x, Level 10 ~ 2x, linear scale.
 		int clampedLevel = Math.max(1, Math.min(10, level));
 		double step = 1.0 / 9.0;
 		return 1.0 + (clampedLevel - 1) * step;
@@ -139,26 +147,27 @@ public class MythicalKeyItem extends Item {
 	}
 
 	@Override
-	public net.minecraft.text.Text getName(ItemStack stack) {
-		var base = super.getName(stack);
-		var mobName = getMobType(stack)
-				.map(type -> (net.minecraft.text.Text) type.getName())
-				.orElse(net.minecraft.text.Text.literal("Unknown"));
-		return net.minecraft.text.Text.translatable("item.emplus.mythical_key.with_mob", base, mobName);
+	public void appendTooltip(ItemStack stack, World world, java.util.List<Text> tooltip, net.minecraft.client.item.TooltipContext context) {
+		getMobType(stack).ifPresent(type -> {
+			Text mobName = type.getName();
+			tooltip.add(Text.translatable("tooltip.emplus.summons", mobName).formatted(Formatting.DARK_PURPLE));
+		});
+		super.appendTooltip(stack, world, tooltip, context);
 	}
 
 	public Optional<EntityType<? extends MobEntity>> getMobType(ItemStack stack) {
 		if (!stack.hasNbt() || !stack.getNbt().contains("Mob")) {
 			return Optional.empty();
 		}
-		Identifier identifier = Identifier.tryParse(stack.getNbt().getString("Mob"));
-		if (identifier == null) {
+		Identifier id = Identifier.tryParse(stack.getNbt().getString("Mob"));
+		if (id == null) {
 			return Optional.empty();
 		}
-		for (EntityType<? extends MobEntity> candidate : ModItems.KEY_MOBS) {
-			if (net.minecraft.registry.Registries.ENTITY_TYPE.getId(candidate).equals(identifier)) {
-				return Optional.of(candidate);
-			}
+		EntityType<?> type = net.minecraft.registry.Registries.ENTITY_TYPE.get(id);
+		if (type != null && net.minecraft.entity.mob.MobEntity.class.isAssignableFrom(type.getBaseClass())) {
+			@SuppressWarnings("unchecked")
+			EntityType<? extends MobEntity> mobType = (EntityType<? extends MobEntity>) type;
+			return Optional.of(mobType);
 		}
 		return Optional.empty();
 	}
@@ -168,6 +177,14 @@ public class MythicalKeyItem extends Item {
 		if (id != null) {
 			stack.getOrCreateNbt().putString("Mob", id.toString());
 		}
+	}
+
+	private String getPlayerOriginIfEnabled(PlayerEntity player) {
+		ModConfig config = ConfigManager.get();
+		if (!config.originsSpecificLoot) {
+			return null;
+		}
+		return OriginLookup.getOriginId(player).orElse(null);
 	}
 
 	@Override

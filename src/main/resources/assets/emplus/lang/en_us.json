@@ -10,6 +10,6 @@
   "item.emplus.mythical_key_8": "Mythical Key VIII",
   "item.emplus.mythical_key_9": "Mythical Key IX",
   "item.emplus.mythical_key_10": "Mythical Key X",
-  "item.emplus.mythical_key.with_mob": "%s (%s)",
-  "bossbar.emplus.mythical_mob": "Mythical Invader — Level %s"
+  "bossbar.emplus.mythical_mob": "Mythical Invader — Level %s",
+  "tooltip.emplus.summons": "Summons: %s"
 }

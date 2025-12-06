@@ -5,6 +5,9 @@ import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.item.ItemStack;
+import taethaprod.emplus.config.ConfigManager;
+import taethaprod.emplus.config.ModConfig;
+import taethaprod.emplus.config.SpawnConfigManager;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +22,8 @@ public class EMPlus implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
+		ConfigManager.load();
+		SpawnConfigManager.load();
 		ModItems.init();
 
 		ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> dropNextKey(entity));
@@ -47,8 +52,46 @@ public class EMPlus implements ModInitializer {
 					if (!stack.isEmpty()) {
 						entity.dropStack(stack);
 					}
+					dropOriginLoot(entity, level);
 				}
 			} catch (NumberFormatException ignored) {
+			}
+			break;
+		}
+	}
+
+	private void dropOriginLoot(LivingEntity entity, int level) {
+		ModConfig config = ConfigManager.get();
+		if (!config.originsSpecificLoot) {
+			return;
+		}
+		String originId = null;
+		for (String tag : entity.getCommandTags()) {
+			if (tag.startsWith("emplus:origin=")) {
+				originId = tag.substring(tag.indexOf('=') + 1);
+				break;
+			}
+		}
+		if (originId == null || originId.isEmpty()) {
+			return;
+		}
+		for (ModConfig.OriginLoot loot : config.originLoot) {
+			if (loot.origin == null || loot.items == null) {
+				continue;
+			}
+			if (!originId.equals(loot.origin)) {
+				continue;
+			}
+			for (String itemId : loot.items) {
+				var id = net.minecraft.util.Identifier.tryParse(itemId);
+				if (id == null) {
+					continue;
+				}
+				var item = net.minecraft.registry.Registries.ITEM.get(id);
+				if (item == net.minecraft.item.Items.AIR) {
+					continue;
+				}
+				entity.dropStack(new ItemStack(item));
 			}
 			break;
 		}
