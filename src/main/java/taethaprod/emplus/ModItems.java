@@ -1,6 +1,5 @@
 package taethaprod.emplus;
 
-import com.google.common.collect.ImmutableMap;
 import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.mob.MobEntity;
