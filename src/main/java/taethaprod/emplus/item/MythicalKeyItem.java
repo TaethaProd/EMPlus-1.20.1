@@ -148,10 +148,16 @@ public class MythicalKeyItem extends Item {
 
 	@Override
 	public void appendTooltip(ItemStack stack, World world, java.util.List<Text> tooltip, net.minecraft.client.item.TooltipContext context) {
-		getMobType(stack).ifPresent(type -> {
-			Text mobName = type.getName();
+		Identifier id = stack.hasNbt() && stack.getNbt().contains("Mob") ? Identifier.tryParse(stack.getNbt().getString("Mob")) : null;
+		Text mobName = null;
+		if (id != null) {
+			mobName = getMobType(stack)
+					.<Text>map(EntityType::getName)
+					.orElse(Text.translatable("entity." + id.getNamespace() + "." + id.getPath()));
+		}
+		if (mobName != null) {
 			tooltip.add(Text.translatable("tooltip.emplus.summons", mobName).formatted(Formatting.DARK_PURPLE));
-		});
+		}
 		super.appendTooltip(stack, world, tooltip, context);
 	}
 
