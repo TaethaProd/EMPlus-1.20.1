@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public final class ModItems {
 	public static final Map<Integer, MythicalKeyItem> MYTHICAL_KEYS;
@@ -42,14 +43,7 @@ public final class ModItems {
 				FabricItemGroup.builder()
 						.icon(() -> new ItemStack(keys.get(1)))
 						.displayName(Text.translatable("itemGroup." + EMPlus.MOD_ID + ".mythical_keys"))
-						.entries((displayContext, entries) -> {
-							keys.values().forEach(key -> entries.add(new ItemStack(key)));
-							for (EntityType<? extends MobEntity> mob : KEY_MOBS) {
-								for (MythicalKeyItem key : keys.values()) {
-									entries.add(createKeyStack(mob, key.getLevel()));
-								}
-							}
-						})
+						.entries((displayContext, entries) -> keys.values().forEach(key -> entries.add(new ItemStack(key))))
 						.build()
 		);
 	}
@@ -70,11 +64,7 @@ public final class ModItems {
 		if (item == null) {
 			return ItemStack.EMPTY;
 		}
-		ItemStack stack = new ItemStack(item);
-		if (type != null) {
-			item.setMob(stack, type);
-		}
-		return stack;
+		return new ItemStack(item);
 	}
 
 	public static EntityType<? extends MobEntity> getRandomMobType(net.minecraft.util.math.random.Random random) {
@@ -101,9 +91,11 @@ public final class ModItems {
 			if (type.getSpawnGroup().isPeaceful()) {
 				continue;
 			}
-			@SuppressWarnings("unchecked")
-			EntityType<? extends MobEntity> mobType = (EntityType<? extends MobEntity>) type;
-			result.add(mobType);
+			if (MobEntity.class.isAssignableFrom(type.getBaseClass())) {
+				@SuppressWarnings("unchecked")
+				EntityType<? extends MobEntity> mobType = (EntityType<? extends MobEntity>) type;
+				result.add(mobType);
+			}
 		}
 		if (result.isEmpty()) {
 			// Fallback to defaults if config is empty or invalid.
@@ -111,6 +103,9 @@ public final class ModItems {
 			result.add(EntityType.SKELETON);
 			result.add(EntityType.WITCH);
 		}
-		return List.copyOf(result);
+		List<EntityType<? extends MobEntity>> built = List.copyOf(result);
+		EMPlus.LOGGER.info("Loaded {} spawnable mobs for keys: {}", built.size(),
+				built.stream().map(type -> Registries.ENTITY_TYPE.getId(type).toString()).collect(Collectors.joining(", ")));
+		return built;
 	}
 }
