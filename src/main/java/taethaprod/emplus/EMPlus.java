@@ -3,6 +3,7 @@ package taethaprod.emplus;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.Identifier;
@@ -10,6 +11,10 @@ import taethaprod.emplus.config.ConfigManager;
 import taethaprod.emplus.config.ModConfig;
 import taethaprod.emplus.config.SpawnConfigManager;
 import taethaprod.emplus.config.BossScalingConfigManager;
+import taethaprod.emplus.classes.ClassesConfigManager;
+import taethaprod.emplus.classes.ClassesRestrictionsManager;
+import taethaprod.emplus.classes.ClassRestrictionHandler;
+import taethaprod.emplus.command.ClassesCommand;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,7 +35,15 @@ public class EMPlus implements ModInitializer {
 		ConfigManager.load();
 		SpawnConfigManager.load();
 		BossScalingConfigManager.load();
+		ClassesConfigManager.load();
+		ClassesRestrictionsManager.load();
 		ModItems.init();
+
+		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
+			ClassesCommand.register(dispatcher);
+		});
+
+		ClassRestrictionHandler.registerServer();
 
 		ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> dropNextKey(entity));
 		ServerTickEvents.END_SERVER_TICK.register(server -> {

@@ -2,8 +2,12 @@
 	"required": true,
 	"package": "taethaprod.emplus.mixin",
 	"compatibilityLevel": "JAVA_17",
+	"refmap": "emplus.refmap.json",
 	"mixins": [
-		"ExampleMixin"
+		"ExampleMixin",
+		"ArmorEquipBlockMixin",
+		"LivingEntityEquipMixin",
+		"ServerPlayNetworkHandlerActionMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

@@ -20,11 +20,14 @@ import java.util.HashMap;
 import java.util.Map;
 
 public final class BossScalingConfigManager {
-	private static final Gson GSON = new GsonBuilder()
+private static final Gson GSON = new GsonBuilder()
 			.registerTypeAdapter(BossScalingConfig.TierScaling.class, new TierScalingAdapter())
 			.setPrettyPrinting()
 			.create();
-	private static final Path CONFIG_PATH = net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir().resolve("emplus_scaling.json");
+	private static final Path CONFIG_DIR = net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir()
+			.resolve("emplus")
+			.resolve("mythickeys");
+	private static final Path CONFIG_PATH = CONFIG_DIR.resolve("emplus_scaling.json");
 	private static BossScalingConfig CONFIG;
 
 	private BossScalingConfigManager() {

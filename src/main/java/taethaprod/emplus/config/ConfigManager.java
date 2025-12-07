@@ -20,11 +20,14 @@ import java.nio.file.Path;
 import java.util.List;
 
 public final class ConfigManager {
-	private static final Gson GSON = new GsonBuilder()
+private static final Gson GSON = new GsonBuilder()
 			.registerTypeAdapter(ModConfig.OriginLoot.LootEntry.class, new LootEntryAdapter())
 			.setPrettyPrinting()
 			.create();
-	private static final Path CONFIG_PATH = net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir().resolve("emplus.json");
+	private static final Path CONFIG_DIR = net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir()
+			.resolve("emplus")
+			.resolve("mythickeys");
+	private static final Path CONFIG_PATH = CONFIG_DIR.resolve("emplus.json");
 	private static ModConfig CONFIG;
 
 	private ConfigManager() {

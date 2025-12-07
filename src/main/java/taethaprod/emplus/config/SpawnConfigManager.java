@@ -14,7 +14,10 @@ import java.util.List;
 
 public final class SpawnConfigManager {
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-	private static final Path CONFIG_PATH = net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir().resolve("emplus_spawns.json");
+	private static final Path CONFIG_DIR = net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir()
+			.resolve("emplus")
+			.resolve("mythickeys");
+	private static final Path CONFIG_PATH = CONFIG_DIR.resolve("emplus_spawns.json");
 	private static SpawnConfig CONFIG;
 
 	private SpawnConfigManager() {

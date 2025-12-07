@@ -28,6 +28,9 @@ loom {
 		}
 	}
 
+	mixin {
+		defaultRefmapName = "emplus.refmap.json"
+	}
 }
 
 fabricApi {

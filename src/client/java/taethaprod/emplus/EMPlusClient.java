@@ -1,10 +1,11 @@
 package taethaprod.emplus;
 
 import net.fabricmc.api.ClientModInitializer;
+import taethaprod.emplus.classes.ClassRestrictionClient;
 
 public class EMPlusClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
-		// This entrypoint is suitable for setting up client-specific logic, such as rendering.
+		ClassRestrictionClient.register();
 	}
 }
