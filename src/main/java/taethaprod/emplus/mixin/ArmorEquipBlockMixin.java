@@ -16,7 +16,6 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import taethaprod.emplus.classes.ClassesRestrictionsManager;
 
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -45,7 +44,7 @@ public abstract class ArmorEquipBlockMixin {
 			}
 		}
 
-		if (!isProtectedSlot(slot, player)) {
+		if (!isArmorSlot(slot, player)) {
 			return;
 		}
 
@@ -69,18 +68,15 @@ public abstract class ArmorEquipBlockMixin {
 		if (!ClassesRestrictionsManager.isAllowedForPlayer(serverPlayer, incoming)) {
 			sendRequirementMessage(serverPlayer, incoming);
 			ci.cancel();
-			serverPlayer.getInventory().markDirty();
-			serverPlayer.playerScreenHandler.syncState();
 		}
 	}
 
-	private boolean isProtectedSlot(Slot slot, PlayerEntity player) {
+	private boolean isArmorSlot(Slot slot, PlayerEntity player) {
 		if (!(player.getInventory() == slot.inventory)) {
 			return false;
 		}
 		int index = slot.getIndex();
-		// PlayerInventory armor slots: 36-39, offhand: 40
-		return (index >= 36 && index < 40) || index == 40;
+		return index >= 36 && index < 40; // PlayerInventory armor slots
 	}
 
 	private void sendRequirementMessage(ServerPlayerEntity player, ItemStack stack) {
