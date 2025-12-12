@@ -1,0 +1,4 @@
+StartUI TODO (remaining):
+- [ ] Repeat showing if closed/ESC, while player not completed onboarding (now only on join and ESC is blocked).
+- [ ] Replace placeholder texts with final copy/localization.
+- [ ] Highlight keybinds from other mods if needed (requires their ids/registry names).

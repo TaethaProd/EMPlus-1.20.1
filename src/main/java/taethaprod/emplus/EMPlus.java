@@ -15,6 +15,8 @@ import taethaprod.emplus.classes.ClassesConfigManager;
 import taethaprod.emplus.classes.ClassesRestrictionsManager;
 import taethaprod.emplus.classes.ClassRestrictionHandler;
 import taethaprod.emplus.command.ClassesCommand;
+import taethaprod.emplus.onboarding.OnboardingNetworking;
+import taethaprod.emplus.startui.FactionCommandsConfigManager;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +39,7 @@ public class EMPlus implements ModInitializer {
 		BossScalingConfigManager.load();
 		ClassesConfigManager.load();
 		ClassesRestrictionsManager.load();
+		FactionCommandsConfigManager.load();
 		ModItems.init();
 
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
@@ -44,6 +47,7 @@ public class EMPlus implements ModInitializer {
 		});
 
 		ClassRestrictionHandler.registerServer();
+		OnboardingNetworking.registerServer();
 
 		ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> dropNextKey(entity));
 		ServerTickEvents.END_SERVER_TICK.register(server -> {

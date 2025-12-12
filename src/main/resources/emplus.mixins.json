@@ -9,6 +9,8 @@
 		"LivingEntityEquipMixin",
 		"ServerPlayNetworkHandlerActionMixin"
 	],
+	"client": [
+	],
 	"injectors": {
 		"defaultRequire": 1
 	},
