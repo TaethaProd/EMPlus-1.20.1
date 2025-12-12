@@ -16,7 +16,9 @@ import taethaprod.emplus.classes.ClassesRestrictionsManager;
 import taethaprod.emplus.classes.ClassRestrictionHandler;
 import taethaprod.emplus.command.ClassesCommand;
 import taethaprod.emplus.onboarding.OnboardingNetworking;
+import taethaprod.emplus.onboarding.OnboardingCommand;
 import taethaprod.emplus.startui.FactionCommandsConfigManager;
+import taethaprod.emplus.startui.FactionClassCommandsConfigManager;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,10 +42,12 @@ public class EMPlus implements ModInitializer {
 		ClassesConfigManager.load();
 		ClassesRestrictionsManager.load();
 		FactionCommandsConfigManager.load();
+		FactionClassCommandsConfigManager.load();
 		ModItems.init();
 
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
 			ClassesCommand.register(dispatcher);
+			OnboardingCommand.register(dispatcher);
 		});
 
 		ClassRestrictionHandler.registerServer();

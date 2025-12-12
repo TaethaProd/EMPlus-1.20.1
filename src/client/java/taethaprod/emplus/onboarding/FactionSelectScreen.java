@@ -1,7 +1,5 @@
 package taethaprod.emplus.onboarding;
 
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
@@ -41,20 +39,20 @@ public class FactionSelectScreen extends Screen {
 		int leftBtnX = leftX + (columnWidth - buttonWidth) / 2 - 30;
 		int rightBtnX = rightX + (columnWidth - buttonWidth) / 2 - 30;
 
-		this.addDrawableChild(ButtonWidget.builder(Text.literal("Примкнуть к Умбралис"), b -> chooseFaction(FACTION_A.toString()))
+		this.addDrawableChild(ButtonWidget.builder(Text.literal("Примкнуть к Умбралис"), b -> openClassScreen(FACTION_A))
 				.dimensions(leftBtnX, y, buttonWidth, buttonHeight)
 				.build());
-		this.addDrawableChild(ButtonWidget.builder(Text.literal("Примкнуть к Королевству"), b -> chooseFaction(FACTION_B.toString()))
+		this.addDrawableChild(ButtonWidget.builder(Text.literal("Примкнуть к Королевству"), b -> openClassScreen(FACTION_B))
 				.dimensions(rightBtnX, y, buttonWidth, buttonHeight)
 				.build());
 	}
 
-	private void chooseFaction(String factionId) {
-		var buf = PacketByteBufs.create();
-		buf.writeString(factionId);
-		ClientPlayNetworking.send(OnboardingNetworking.ONBOARDING_DONE, buf);
-		if (this.client != null) {
-			this.client.setScreen(null);
+	private void openClassScreen(Identifier factionId) {
+		if (this.client == null) return;
+		if (FACTION_A.equals(factionId)) {
+			this.client.setScreen(new FactionAClassSelectScreen(factionId));
+		} else if (FACTION_B.equals(factionId)) {
+			this.client.setScreen(new FactionBClassSelectScreen(factionId));
 		}
 	}
 
@@ -143,27 +141,25 @@ public class FactionSelectScreen extends Screen {
 
 	private FactionInfo mockFactionA() {
 		FactionInfo info = new FactionInfo();
-		info.title = "Умбралис";
-		info.description = "Плейсхолдер описания фракции.";
-		info.classes.add(new ClassInfo("Воин", "Описание.", DEFAULT_ICON));
-		info.classes.add(new ClassInfo("Лучник", "Описание.", DEFAULT_ICON));
-		info.classes.add(new ClassInfo("Разбойник", "Описание.", DEFAULT_ICON));
-		info.classes.add(new ClassInfo("Маг", "Описание.", DEFAULT_ICON));
-		info.classes.add(new ClassInfo("Рыцарь смерти", "Описание.", DEFAULT_ICON));
-		info.classes.add(new ClassInfo("Ведьмак", "Описание.", DEFAULT_ICON));
+		info.title = "Фракция А";
+		info.description = "Плейсхолдер описания фракции А.";
+		info.classes.add(new ClassInfo("Разведчик", "Мобильный следопыт, ищет ресурсы и разведку ведёт для команды.", DEFAULT_ICON));
+		info.classes.add(new ClassInfo("Воин", "Фронтлайн боец, держит удар и защищает союзников.", DEFAULT_ICON));
+		info.classes.add(new ClassInfo("Стрелок", "Наносит урон с расстояния и покрывает команду огнём.", DEFAULT_ICON));
+		info.classes.add(new ClassInfo("Инженер", "Ставит механизмы, ловушки и усиливает базу.", DEFAULT_ICON));
+		info.classes.add(new ClassInfo("Алхимик", "Колдует зелья поддержки и ослабления врагов.", DEFAULT_ICON));
 		return info;
 	}
 
 	private FactionInfo mockFactionB() {
 		FactionInfo info = new FactionInfo();
-		info.title = "Королевство";
-		info.description = "Плейсхолдер описания фракции.";
-		info.classes.add(new ClassInfo("Воин", "Описание.", DEFAULT_ICON));
-		info.classes.add(new ClassInfo("Лучник", "Описание.", DEFAULT_ICON));
-		info.classes.add(new ClassInfo("Разбойник", "Описание.", DEFAULT_ICON));
-		info.classes.add(new ClassInfo("Паладин", "Описание.", DEFAULT_ICON));
-		info.classes.add(new ClassInfo("Жрец", "Описание.", DEFAULT_ICON));
-		info.classes.add(new ClassInfo("Стрелок", "Описание.", DEFAULT_ICON));
+		info.title = "Фракция Б";
+		info.description = "Плейсхолдер описания фракции Б.";
+		info.classes.add(new ClassInfo("Маг", "Классическая магия дальнего боя, урон стихиями.", DEFAULT_ICON));
+		info.classes.add(new ClassInfo("Призыватель", "Призывает существ для защиты и атаки.", DEFAULT_ICON));
+		info.classes.add(new ClassInfo("Ассасин", "Скрытный убийца с высоким уроном по одиночным целям.", DEFAULT_ICON));
+		info.classes.add(new ClassInfo("Жрец", "Лечит союзников и накладывает благословения.", DEFAULT_ICON));
+		info.classes.add(new ClassInfo("Бард", "Поддержка аурами и песнями, усиливает команду.", DEFAULT_ICON));
 		return info;
 	}
 
