@@ -3,47 +3,30 @@ package taethaprod.emplus.onboarding;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
-
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 
 public class FactionSelectScreen extends Screen {
 	private static final Identifier FACTION_A = new Identifier("emplus", "faction_a");
 	private static final Identifier FACTION_B = new Identifier("emplus", "faction_b");
-	private final List<FactionInfo> factions = new ArrayList<>();
-	private final Set<String> expanded = new HashSet<>();
-	private static final ItemStack DEFAULT_ICON = new ItemStack(Items.APPLE);
 
 	public FactionSelectScreen() {
-		super(Text.literal("Выбор фракции"));
-		factions.add(mockFactionA());
-		factions.add(mockFactionB());
+		super(Text.translatable("ui.emplus.faction.title"));
 	}
 
 	@Override
 	protected void init() {
 		this.clearChildren();
-		int buttonWidth = 140;
+		int buttonWidth = 180;
 		int buttonHeight = 20;
-		int y = this.height - 40;
+		int centerX = this.width / 2;
+		int y = this.height / 2 - 12;
 
-		int columnWidth = this.width / 2;
-		int leftX = 30;
-		int rightX = this.width / 2 + 10;
-		int leftBtnX = leftX + (columnWidth - buttonWidth) / 2 - 30;
-		int rightBtnX = rightX + (columnWidth - buttonWidth) / 2 - 30;
-
-		this.addDrawableChild(ButtonWidget.builder(Text.literal("Примкнуть к Умбралис"), b -> openClassScreen(FACTION_A))
-				.dimensions(leftBtnX, y, buttonWidth, buttonHeight)
+		this.addDrawableChild(ButtonWidget.builder(Text.translatable("ui.emplus.faction.join_umbralis"), b -> openClassScreen(FACTION_A))
+				.dimensions(centerX - buttonWidth / 2, y, buttonWidth, buttonHeight)
 				.build());
-		this.addDrawableChild(ButtonWidget.builder(Text.literal("Примкнуть к Королевству"), b -> openClassScreen(FACTION_B))
-				.dimensions(rightBtnX, y, buttonWidth, buttonHeight)
+		this.addDrawableChild(ButtonWidget.builder(Text.translatable("ui.emplus.faction.join_kingdom"), b -> openClassScreen(FACTION_B))
+				.dimensions(centerX - buttonWidth / 2, y + buttonHeight + 8, buttonWidth, buttonHeight)
 				.build());
 	}
 
@@ -59,144 +42,11 @@ public class FactionSelectScreen extends Screen {
 	@Override
 	public void render(DrawContext context, int mouseX, int mouseY, float delta) {
 		this.renderBackground(context);
-		int centerX = this.width / 2;
-		int y = 30;
-		context.drawCenteredTextWithShadow(this.textRenderer, "Поздравляем с прибытием! (плейсхолдер лора)", centerX, y, 0xFFFFFF);
-		y += 20;
-		context.drawCenteredTextWithShadow(this.textRenderer, "Выберите фракцию и изучите её классы:", centerX, y, 0xAAAAAA);
-
-		int leftX = 30;
-		int rightX = this.width / 2 + 10;
-		int topY = 80;
-
-		int dividerX = this.width / 2;
-		context.fill(dividerX - 1, topY - 10, dividerX + 1, this.height - 60, 0xFF555555);
-
-		renderFaction(context, factions.get(0), leftX, topY, 0);
-		renderFaction(context, factions.get(1), rightX, topY, 1);
-
 		super.render(context, mouseX, mouseY, delta);
 	}
 
 	@Override
 	public boolean shouldCloseOnEsc() {
 		return false;
-	}
-
-	@Override
-	public boolean mouseClicked(double mouseX, double mouseY, int button) {
-		if (button == 0) {
-			for (int f = 0; f < factions.size(); f++) {
-				FactionInfo faction = factions.get(f);
-				for (int i = 0; i < faction.classes.size(); i++) {
-					ClassInfo cls = faction.classes.get(i);
-					if (cls.lastBounds != null && cls.lastBounds.isPointInside(mouseX, mouseY)) {
-						toggleClass(f, i);
-						return true;
-					}
-				}
-			}
-		}
-		return super.mouseClicked(mouseX, mouseY, button);
-	}
-
-	private void toggleClass(int factionIndex, int classIndex) {
-		String key = factionIndex + ":" + classIndex;
-		if (!expanded.add(key)) {
-			expanded.remove(key);
-		}
-	}
-
-	private void renderFaction(DrawContext ctx, FactionInfo faction, int x, int yStart, int factionIndex) {
-		int titleY = yStart;
-		ctx.drawCenteredTextWithShadow(this.textRenderer, faction.title, x + 160, titleY, 0xFFFFFF);
-		titleY += 15;
-		ctx.drawCenteredTextWithShadow(this.textRenderer, faction.description, x + 160, titleY, 0xAAAAAA);
-		titleY += 25;
-
-		int y = titleY;
-		for (int i = 0; i < faction.classes.size(); i++) {
-			ClassInfo cls = faction.classes.get(i);
-			int iconX = x;
-			int nameX = x + 20;
-			int arrowX = nameX + 140;
-			int rowHeight = 18;
-
-			ctx.drawItem(cls.icon, iconX, y);
-			ctx.drawTextWithShadow(this.textRenderer, cls.name, nameX, y + 4, 0xFFFFFF);
-			ctx.drawTextWithShadow(this.textRenderer, "->", arrowX, y + 4, 0xAAAAAA);
-
-			boolean isExpanded = expanded.contains(factionIndex + ":" + i);
-			int blockTop = y;
-			if (isExpanded) {
-				int descY = y + rowHeight + 2;
-				ctx.drawTextWrapped(this.textRenderer, Text.literal(cls.description), x, descY, 260, 0xCCCCCC);
-				y = descY + this.textRenderer.getWrappedLinesHeight(cls.description, 260) + 8;
-			} else {
-				y += rowHeight + 8;
-			}
-			cls.lastBounds = new Rect(nameX, blockTop, y, x + 260);
-		}
-	}
-
-	private FactionInfo mockFactionA() {
-		FactionInfo info = new FactionInfo();
-		info.title = "Фракция А";
-		info.description = "Плейсхолдер описания фракции А.";
-		info.classes.add(new ClassInfo("Разведчик", "Мобильный следопыт, ищет ресурсы и разведку ведёт для команды.", DEFAULT_ICON));
-		info.classes.add(new ClassInfo("Воин", "Фронтлайн боец, держит удар и защищает союзников.", DEFAULT_ICON));
-		info.classes.add(new ClassInfo("Стрелок", "Наносит урон с расстояния и покрывает команду огнём.", DEFAULT_ICON));
-		info.classes.add(new ClassInfo("Инженер", "Ставит механизмы, ловушки и усиливает базу.", DEFAULT_ICON));
-		info.classes.add(new ClassInfo("Алхимик", "Колдует зелья поддержки и ослабления врагов.", DEFAULT_ICON));
-		return info;
-	}
-
-	private FactionInfo mockFactionB() {
-		FactionInfo info = new FactionInfo();
-		info.title = "Фракция Б";
-		info.description = "Плейсхолдер описания фракции Б.";
-		info.classes.add(new ClassInfo("Маг", "Классическая магия дальнего боя, урон стихиями.", DEFAULT_ICON));
-		info.classes.add(new ClassInfo("Призыватель", "Призывает существ для защиты и атаки.", DEFAULT_ICON));
-		info.classes.add(new ClassInfo("Ассасин", "Скрытный убийца с высоким уроном по одиночным целям.", DEFAULT_ICON));
-		info.classes.add(new ClassInfo("Жрец", "Лечит союзников и накладывает благословения.", DEFAULT_ICON));
-		info.classes.add(new ClassInfo("Бард", "Поддержка аурами и песнями, усиливает команду.", DEFAULT_ICON));
-		return info;
-	}
-
-	private static class FactionInfo {
-		String title;
-		String description;
-		List<ClassInfo> classes = new ArrayList<>();
-	}
-
-	private static class ClassInfo {
-		String name;
-		String description;
-		ItemStack icon;
-		Rect lastBounds;
-
-		ClassInfo(String name, String description, ItemStack icon) {
-			this.name = name;
-			this.description = description;
-			this.icon = icon;
-		}
-	}
-
-	private static class Rect {
-		final double x1;
-		final double y1;
-		final double y2;
-		final double x2;
-
-		Rect(double x1, double yStart, double y2, double x2) {
-			this.x1 = x1;
-			this.y1 = yStart;
-			this.y2 = y2;
-			this.x2 = x2;
-		}
-
-		boolean isPointInside(double x, double y) {
-			return x >= x1 && x <= x2 && y >= y1 && y <= y2;
-		}
 	}
 }

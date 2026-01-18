@@ -7,6 +7,7 @@ import net.minecraft.screen.slot.Slot;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import net.minecraft.util.collection.DefaultedList;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -14,6 +15,7 @@ import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import taethaprod.emplus.classes.ClassesConfigManager;
 import taethaprod.emplus.classes.ClassesRestrictionsManager;
 
 import java.util.Set;
@@ -84,6 +86,10 @@ public abstract class ArmorEquipBlockMixin {
 		if (required.isEmpty()) {
 			return;
 		}
-		player.sendMessage(Text.literal("Requires class: " + required.stream().collect(Collectors.joining(", "))), true);
+		String classes = required.stream()
+				.map(ClassesConfigManager::getDisplayName)
+				.collect(Collectors.joining(", "));
+		player.sendMessage(Text.translatable("message.emplus.classes.required", classes)
+				.formatted(Formatting.RED), true);
 	}
 }

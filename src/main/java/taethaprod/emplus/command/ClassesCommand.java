@@ -44,43 +44,45 @@ public final class ClassesCommand {
 
 	private static int addClass(ServerCommandSource source, String className) {
 		if (ClassesConfigManager.addClass(className)) {
-			source.sendFeedback(() -> Text.literal("Class added: " + className), true);
+			source.sendFeedback(() -> Text.translatable("message.emplus.classes.added", className), true);
 			return 1;
 		}
-		source.sendError(Text.literal("Class already exists or name is invalid."));
+		source.sendError(Text.translatable("message.emplus.classes.add_failed"));
 		return 0;
 	}
 
 	private static int setClass(ServerCommandSource source, ServerPlayerEntity player, String className) {
 		if (!ClassesConfigManager.hasClass(className)) {
-			source.sendError(Text.literal("Class not found: " + className));
+			source.sendError(Text.translatable("message.emplus.classes.not_found", className));
 			return 0;
 		}
 		applyClassTag(player, className);
-		source.sendFeedback(() -> Text.literal("Set class " + className + " for " + player.getName().getString()), true);
+		source.sendFeedback(() -> Text.translatable("message.emplus.classes.set",
+				className, player.getName().getString()), true);
 		return 1;
 	}
 
 	private static int restrict(ServerCommandSource source, String itemIdString, String className) {
 		if (!ClassesConfigManager.hasClass(className)) {
-			source.sendError(Text.literal("Class not found: " + className));
+			source.sendError(Text.translatable("message.emplus.classes.not_found", className));
 			return 0;
 		}
 		Identifier id = Identifier.tryParse(itemIdString);
 		if (id == null) {
-			source.sendError(Text.literal("Invalid item id: " + itemIdString));
+			source.sendError(Text.translatable("message.emplus.classes.invalid_item", itemIdString));
 			return 0;
 		}
 		var item = Registries.ITEM.get(id);
 		if (item == net.minecraft.item.Items.AIR) {
-			source.sendError(Text.literal("Item not found: " + id));
+			source.sendError(Text.translatable("message.emplus.classes.item_not_found", id.toString()));
 			return 0;
 		}
 		if (ClassesRestrictionsManager.addRestriction(className, id)) {
-			source.sendFeedback(() -> Text.literal("Restricted " + id + " to class " + className), true);
+			source.sendFeedback(() -> Text.translatable("message.emplus.classes.restricted",
+					id.toString(), className), true);
 			return 1;
 		}
-		source.sendError(Text.literal("Restriction already exists or invalid."));
+		source.sendError(Text.translatable("message.emplus.classes.restriction_exists"));
 		return 0;
 	}
 

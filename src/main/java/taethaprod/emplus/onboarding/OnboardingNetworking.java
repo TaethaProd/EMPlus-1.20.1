@@ -7,10 +7,10 @@ import net.minecraft.network.PacketByteBuf;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
 import taethaprod.emplus.EMPlus;
-import taethaprod.emplus.startui.FactionCommandsConfig;
-import taethaprod.emplus.startui.FactionCommandsConfigManager;
+import taethaprod.emplus.startui.StartUiConfigManager;
 import taethaprod.emplus.startui.FactionClassCommandsConfig;
 import taethaprod.emplus.startui.FactionClassCommandsConfigManager;
+import taethaprod.emplus.startui.UpdateAnnouncementManager;
 
 public final class OnboardingNetworking {
 	public static final Identifier OPEN_INTRO = new Identifier(EMPlus.MOD_ID, "open_intro");
@@ -23,16 +23,17 @@ public final class OnboardingNetworking {
 		ServerPlayNetworking.registerGlobalReceiver(ONBOARDING_DONE, (server, player, handler, buf, responseSender) -> {
 			String faction = buf.readString(64);
 			String classId = buf.isReadable() ? buf.readString(128) : "";
+			String className = resolveClassName(classId);
 			server.execute(() -> {
-				runFactionCommands(player, faction);
 				runClassCommands(player, faction, classId);
-				OnboardingManager.markOnboarded(player, faction, classId);
+				OnboardingManager.markOnboarded(player, faction, className);
+				UpdateAnnouncementManager.trySendUpdate(player);
 			});
 		});
 
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
 			ServerPlayerEntity player = handler.player;
-			if (!OnboardingManager.isOnboarded(player)) {
+			if (!OnboardingManager.isOnboarded(player) && StartUiConfigManager.get().showFactionScreen) {
 				sendOpenIntro(player);
 			}
 		});
@@ -41,19 +42,6 @@ public final class OnboardingNetworking {
 	public static void sendOpenIntro(ServerPlayerEntity player) {
 		PacketByteBuf buf = PacketByteBufs.create();
 		ServerPlayNetworking.send(player, OPEN_INTRO, buf);
-	}
-
-	private static void runFactionCommands(ServerPlayerEntity player, String factionId) {
-		FactionCommandsConfig config = FactionCommandsConfigManager.get();
-		boolean isA = "emplus:faction_a".equals(factionId);
-		boolean isB = "emplus:faction_b".equals(factionId);
-		java.util.List<String> commands = isA ? config.factionA : isB ? config.factionB : java.util.List.of();
-		var source = player.getServer().getCommandSource().withSilent();
-		for (String raw : commands) {
-			if (raw == null || raw.isBlank()) continue;
-			String cmd = raw.replace("{player}", player.getName().getString());
-			player.getServer().getCommandManager().executeWithPrefix(source, cmd);
-		}
 	}
 
 	private static void runClassCommands(ServerPlayerEntity player, String factionId, String classId) {
@@ -79,5 +67,27 @@ public final class OnboardingNetworking {
 			String cmd = raw.replace("{player}", player.getName().getString());
 			player.getServer().getCommandManager().executeWithPrefix(source, cmd);
 		}
+	}
+
+	private static String resolveClassName(String classId) {
+		if (classId == null || classId.isBlank()) {
+			return "";
+		}
+		String normalized = classId.trim().toLowerCase(java.util.Locale.ROOT);
+		if (normalized.startsWith("class_")) {
+			normalized = normalized.substring("class_".length());
+		}
+		return switch (normalized) {
+			case "a1", "b1" -> "warrior";
+			case "a2", "b2" -> "rogue";
+			case "a3", "b3" -> "archer";
+			case "a4" -> "wizard";
+			case "a5" -> "deathknight";
+			case "a6" -> "witcher";
+			case "b4" -> "gunner";
+			case "b5" -> "paladin";
+			case "b6" -> "priest";
+			default -> classId;
+		};
 	}
 }

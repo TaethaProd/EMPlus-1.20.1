@@ -30,6 +30,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class MythicalKeyItem extends Item {
 	private static final String LEVEL_KEY = "Level";
+	public static final String OWNER_TAG_PREFIX = "emplus:mythical_owner=";
 
 	public MythicalKeyItem(Settings settings) {
 		super(settings);
@@ -58,7 +59,8 @@ public class MythicalKeyItem extends Item {
 		}
 
 		// Delay lightning + mob by 2 seconds (40 ticks) for effect.
-		ServerTaskScheduler.schedule(serverWorld, 40, w -> spawnLightningAndMob(w, spawnPos, type, originId, level));
+		java.util.UUID ownerId = user.getUuid();
+		ServerTaskScheduler.schedule(serverWorld, 40, w -> spawnLightningAndMob(w, spawnPos, type, originId, level, ownerId));
 
 		if (!user.getAbilities().creativeMode) {
 			stack.decrement(1);
@@ -68,7 +70,7 @@ public class MythicalKeyItem extends Item {
 		return TypedActionResult.success(stack, world.isClient);
 	}
 
-	private void spawnLightningAndMob(ServerWorld world, Vec3d spawnPos, EntityType<? extends MobEntity> type, String originId, int level) {
+	private void spawnLightningAndMob(ServerWorld world, Vec3d spawnPos, EntityType<? extends MobEntity> type, String originId, int level, java.util.UUID ownerId) {
 		var lightning = net.minecraft.entity.EntityType.LIGHTNING_BOLT.create(world);
 		if (lightning != null) {
 			lightning.refreshPositionAfterTeleport(spawnPos.x, spawnPos.y, spawnPos.z);
@@ -83,6 +85,9 @@ public class MythicalKeyItem extends Item {
 		mob.refreshPositionAndAngles(spawnPos.x, spawnPos.y, spawnPos.z, world.getRandom().nextFloat() * 360.0F, 0.0F);
 		if (originId != null && !originId.isEmpty()) {
 			mob.addCommandTag("emplus:origin=" + originId);
+		}
+		if (ownerId != null) {
+			mob.addCommandTag(ownerTag(ownerId));
 		}
 		world.spawnEntity(mob);
 		SummonedBossBarManager.track(mob, level);
@@ -137,6 +142,10 @@ public class MythicalKeyItem extends Item {
 
 	public static String levelTag(int level) {
 		return "emplus:mythical_key_level=" + level;
+	}
+
+	public static String ownerTag(java.util.UUID ownerId) {
+		return OWNER_TAG_PREFIX + ownerId;
 	}
 
 	private void applyAttributeMultiplier(EntityAttributeInstance instance, double multiplier) {

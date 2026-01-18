@@ -14,20 +14,51 @@ import net.minecraft.util.Rarity;
 import taethaprod.emplus.config.BossScalingConfigManager;
 import taethaprod.emplus.config.SpawnConfig;
 import taethaprod.emplus.config.SpawnConfigManager;
+import taethaprod.emplus.item.ArtifactLocatorItem;
 import taethaprod.emplus.item.MythicalKeyItem;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public final class ModItems {
+	public static Item ARTIFACT_LOCATOR;
+	public static Item ARTIFACT;
 	public static MythicalKeyItem MYTHICAL_KEY;
+	public static final ItemGroup EMPLUS_GROUP;
 	public static final ItemGroup MYTHICAL_KEY_GROUP;
 	public static List<EntityType<? extends MobEntity>> KEY_MOBS = new ArrayList<>();
 
 	static {
 		refreshMobList();
+		ARTIFACT_LOCATOR = new ArtifactLocatorItem(new Item.Settings().maxCount(1));
+		Registry.register(Registries.ITEM, new Identifier(EMPlus.MOD_ID, "artifact_locator"), ARTIFACT_LOCATOR);
+
+		ARTIFACT = new Item(new Item.Settings().rarity(Rarity.UNCOMMON));
+		Registry.register(Registries.ITEM, new Identifier(EMPlus.MOD_ID, "artifact"), ARTIFACT);
+
 		MYTHICAL_KEY = new MythicalKeyItem(new Item.Settings().maxCount(16).rarity(Rarity.EPIC));
 		Registry.register(Registries.ITEM, new Identifier(EMPlus.MOD_ID, "mythical_key"), MYTHICAL_KEY);
+
+		EMPLUS_GROUP = Registry.register(
+				Registries.ITEM_GROUP,
+				new Identifier(EMPlus.MOD_ID, "emplus"),
+				FabricItemGroup.builder()
+						.icon(() -> new ItemStack(ARTIFACT_LOCATOR))
+						.displayName(Text.translatable("itemGroup." + EMPlus.MOD_ID + ".emplus"))
+						.entries((displayContext, entries) -> {
+							entries.add(ARTIFACT_LOCATOR);
+							entries.add(ARTIFACT);
+							for (int tier : BossScalingConfigManager.getDefinedTiers()) {
+								entries.add(createKeyStack(null, tier));
+							}
+							for (EntityType<? extends MobEntity> mob : KEY_MOBS) {
+								for (int tier : BossScalingConfigManager.getDefinedTiers()) {
+									entries.add(createKeyStack(mob, tier));
+								}
+							}
+						})
+						.build()
+		);
 
 		MYTHICAL_KEY_GROUP = Registry.register(
 				Registries.ITEM_GROUP,

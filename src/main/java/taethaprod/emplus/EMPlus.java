@@ -4,8 +4,10 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.item.ItemStack;
+import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import taethaprod.emplus.config.ConfigManager;
 import taethaprod.emplus.config.ModConfig;
@@ -14,11 +16,30 @@ import taethaprod.emplus.config.BossScalingConfigManager;
 import taethaprod.emplus.classes.ClassesConfigManager;
 import taethaprod.emplus.classes.ClassesRestrictionsManager;
 import taethaprod.emplus.classes.ClassRestrictionHandler;
+import taethaprod.emplus.command.CaseCommand;
 import taethaprod.emplus.command.ClassesCommand;
+import taethaprod.emplus.command.HomeCommand;
+import taethaprod.emplus.command.RewardCommand;
+import taethaprod.emplus.command.TpspawnCommand;
+import taethaprod.emplus.common.CommonConfig;
+import taethaprod.emplus.common.CommonConfigManager;
+import taethaprod.emplus.common.OnlineRewardManager;
+import taethaprod.emplus.cases.CaseConfigManager;
+import taethaprod.emplus.cases.CaseServerNetworking;
+import taethaprod.emplus.games.artifacts.ArtifactCommand;
+import taethaprod.emplus.games.artifacts.ArtifactGameManager;
+import taethaprod.emplus.games.artifacts.ArtifactsConfigManager;
 import taethaprod.emplus.onboarding.OnboardingNetworking;
 import taethaprod.emplus.onboarding.OnboardingCommand;
-import taethaprod.emplus.startui.FactionCommandsConfigManager;
+import taethaprod.emplus.startui.StartUiConfigManager;
 import taethaprod.emplus.startui.FactionClassCommandsConfigManager;
+import taethaprod.emplus.startui.UpdateAnnouncementConfigManager;
+import taethaprod.emplus.startui.UpdateAnnouncementManager;
+import taethaprod.emplus.item.MythicalKeyItem;
+import taethaprod.emplus.shop.MoneyCommand;
+import taethaprod.emplus.shop.ShopBalanceState;
+import taethaprod.emplus.shop.ShopConfigManager;
+import taethaprod.emplus.shop.ShopServerNetworking;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,19 +62,35 @@ public class EMPlus implements ModInitializer {
 		BossScalingConfigManager.load();
 		ClassesConfigManager.load();
 		ClassesRestrictionsManager.load();
-		FactionCommandsConfigManager.load();
+		CommonConfigManager.load();
+		CaseConfigManager.load();
+		ArtifactsConfigManager.load();
+		StartUiConfigManager.load();
 		FactionClassCommandsConfigManager.load();
+		UpdateAnnouncementConfigManager.load();
+		ShopConfigManager.load();
 		ModItems.init();
 
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
 			ClassesCommand.register(dispatcher);
 			OnboardingCommand.register(dispatcher);
+			MoneyCommand.register(dispatcher);
+			TpspawnCommand.register(dispatcher);
+			CaseCommand.register(dispatcher);
+			RewardCommand.register(dispatcher);
+			HomeCommand.register(dispatcher);
+			ArtifactCommand.register(dispatcher);
 		});
 
 		ClassRestrictionHandler.registerServer();
 		OnboardingNetworking.registerServer();
+		UpdateAnnouncementManager.registerServer();
+		ShopServerNetworking.registerServer();
+		CaseServerNetworking.registerServer();
+		OnlineRewardManager.registerServer();
+		ArtifactGameManager.registerServer();
 
-		ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> dropNextKey(entity));
+		ServerLivingEntityEvents.AFTER_DEATH.register((entity, source) -> dropNextKey(entity, source));
 		ServerTickEvents.END_SERVER_TICK.register(server -> {
 			ServerTaskScheduler.tick(server);
 			SummonedBossBarManager.tick(server);
@@ -62,10 +99,12 @@ public class EMPlus implements ModInitializer {
 		LOGGER.info("Hello Fabric world!");
 	}
 
-	private void dropNextKey(LivingEntity entity) {
+	private void dropNextKey(LivingEntity entity, DamageSource source) {
 		if (entity.getWorld().isClient()) {
 			return;
 		}
+		despawnBossIfOwnerKilled(entity, source);
+		handlePvpBalanceSteal(entity, source);
 
 		Integer nextKeyLevel = null;
 		Integer summonLevel = null;
@@ -97,6 +136,117 @@ public class EMPlus implements ModInitializer {
 
 		int lootTier = resolveTierForLoot(summonLevel, nextKeyLevel, maxTier);
 		dropOriginLoot(entity, originId, lootTier);
+	}
+
+	private void despawnBossIfOwnerKilled(LivingEntity victim, DamageSource source) {
+		if (!(victim instanceof net.minecraft.server.network.ServerPlayerEntity player)) {
+			return;
+		}
+		if (source == null) {
+			return;
+		}
+		net.minecraft.entity.Entity attacker = source.getAttacker();
+		if (!(attacker instanceof LivingEntity mob)) {
+			return;
+		}
+		java.util.UUID ownerId = player.getUuid();
+		boolean owned = false;
+		for (String tag : mob.getCommandTags()) {
+			if (tag.startsWith(MythicalKeyItem.OWNER_TAG_PREFIX)) {
+				String raw = tag.substring(MythicalKeyItem.OWNER_TAG_PREFIX.length());
+				try {
+					java.util.UUID parsed = java.util.UUID.fromString(raw);
+					if (ownerId.equals(parsed)) {
+						owned = true;
+						break;
+					}
+				} catch (IllegalArgumentException ignored) {
+				}
+			}
+		}
+		if (owned) {
+			mob.discard();
+		}
+	}
+
+	private void handlePvpBalanceSteal(LivingEntity victim, DamageSource source) {
+		if (!(victim instanceof net.minecraft.server.network.ServerPlayerEntity target)) {
+			return;
+		}
+		if (source == null) {
+			return;
+		}
+		net.minecraft.entity.Entity attacker = source.getAttacker();
+		if (!(attacker instanceof net.minecraft.server.network.ServerPlayerEntity killer)) {
+			return;
+		}
+		if (killer.getUuid().equals(target.getUuid())) {
+			return;
+		}
+		String killerFaction = getNormalizedFaction(killer);
+		String targetFaction = getNormalizedFaction(target);
+		if (killerFaction.isEmpty() || targetFaction.isEmpty()) {
+			return;
+		}
+		if (killerFaction.equals(targetFaction)) {
+			return;
+		}
+		CommonConfig config = CommonConfigManager.get();
+		int percent = config.balance_steal;
+		if (percent <= 0) {
+			return;
+		}
+		ShopBalanceState state = ShopBalanceState.get(target.getServer());
+		long targetBalance = state.getBalance(target.getUuid());
+		if (targetBalance <= 0L) {
+			return;
+		}
+		long transfer = (targetBalance * percent) / 100L;
+		if (transfer <= 0L) {
+			return;
+		}
+		if (transfer > targetBalance) {
+			transfer = targetBalance;
+		}
+		if (!state.trySpend(target.getUuid(), transfer)) {
+			return;
+		}
+		state.addBalance(killer.getUuid(), transfer);
+		long killerBalance = state.getBalance(killer.getUuid());
+		long targetBalanceAfter = state.getBalance(target.getUuid());
+		killer.sendMessage(Text.translatable("message.emplus.money.steal.gain",
+				target.getName().getString(), transfer, killerBalance), false);
+		target.sendMessage(Text.translatable("message.emplus.money.steal.loss",
+				transfer, targetBalanceAfter), false);
+		ShopServerNetworking.sendShopSync(killer);
+		ShopServerNetworking.sendShopSync(target);
+	}
+
+	private String getNormalizedFaction(net.minecraft.server.network.ServerPlayerEntity player) {
+		for (String tag : player.getCommandTags()) {
+			String normalized = normalizeFactionTag(tag);
+			if (!normalized.isEmpty()) {
+				return normalized;
+			}
+		}
+		return "";
+	}
+
+	private String normalizeFactionTag(String tag) {
+		if (tag == null || tag.isBlank()) {
+			return "";
+		}
+		String value = tag;
+		if (value.startsWith("emplus:faction=")) {
+			value = value.substring("emplus:faction=".length());
+		}
+		if (value.startsWith("emplus:")) {
+			value = value.substring("emplus:".length());
+		}
+		if (value.startsWith("faction_")) {
+			return value;
+		}
+		return "";
 	}
 
 	private int resolveTierForLoot(Integer summonLevel, Integer nextKeyLevel, int maxTier) {

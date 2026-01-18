@@ -10,18 +10,18 @@ import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-public final class FactionCommandsConfigManager {
+public final class UpdateAnnouncementConfigManager {
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 	private static final Path CONFIG_DIR = net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir()
 			.resolve("emplus")
 			.resolve("startui");
-	private static final Path CONFIG_PATH = CONFIG_DIR.resolve("factionchoose.json");
-	private static FactionCommandsConfig CONFIG;
+	private static final Path CONFIG_PATH = CONFIG_DIR.resolve("update.json");
+	private static UpdateAnnouncementConfig CONFIG;
 
-	private FactionCommandsConfigManager() {
+	private UpdateAnnouncementConfigManager() {
 	}
 
-	public static FactionCommandsConfig get() {
+	public static UpdateAnnouncementConfig get() {
 		if (CONFIG == null) {
 			load();
 		}
@@ -35,12 +35,12 @@ public final class FactionCommandsConfigManager {
 			return;
 		}
 		try (Reader reader = Files.newBufferedReader(CONFIG_PATH)) {
-			CONFIG = GSON.fromJson(reader, FactionCommandsConfig.class);
+			CONFIG = GSON.fromJson(reader, UpdateAnnouncementConfig.class);
 			if (CONFIG == null) {
 				CONFIG = createDefault();
 			}
 		} catch (IOException e) {
-			EMPlus.LOGGER.error("Failed to read faction choose config {}, using defaults", CONFIG_PATH, e);
+			EMPlus.LOGGER.error("Failed to read update announcement config {}, using defaults", CONFIG_PATH, e);
 			CONFIG = createDefault();
 		}
 	}
@@ -52,16 +52,11 @@ public final class FactionCommandsConfigManager {
 				GSON.toJson(CONFIG, writer);
 			}
 		} catch (IOException e) {
-			EMPlus.LOGGER.error("Failed to save faction choose config {}", CONFIG_PATH, e);
+			EMPlus.LOGGER.error("Failed to save update announcement config {}", CONFIG_PATH, e);
 		}
 	}
 
-	private static FactionCommandsConfig createDefault() {
-		FactionCommandsConfig cfg = new FactionCommandsConfig();
-		cfg.factionA.add("/tp {player} 0 100 0");
-		cfg.factionA.add("/give {player} minecraft:apple");
-		cfg.factionB.add("/tp {player} 100 100 100");
-		cfg.factionB.add("/give {player} minecraft:apple");
-		return cfg;
+	private static UpdateAnnouncementConfig createDefault() {
+		return new UpdateAnnouncementConfig();
 	}
 }
